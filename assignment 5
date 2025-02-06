@@ -1,1 +1,141 @@
-hi
+import numpy as np
+
+class Neuron:
+    def __init__(self, input_size):
+        """
+        Initialize a neuron with random weights and bias.
+        :param input_size: Number of input features.
+        """
+        self.weights = np.random.rand(input_size)
+        self.bias = np.random.rand()
+
+    def activate(self, inputs):
+        """
+        Compute the output of the neuron.
+        :param inputs: Input values.
+        :return: Output after applying the sigmoid function.
+        """
+        weighted_sum = np.dot(inputs, self.weights) + self.bias
+        return self.sigmoid(weighted_sum)
+
+    @staticmethod
+    def sigmoid(x):
+        """
+        Sigmoid activation function.
+        :param x: Input value.
+        :return: Sigmoid of x.
+        """
+        return 1 / (1 + np.exp(-x))
+
+    @staticmethod
+    def sigmoid_derivative(x):
+        """
+        Derivative of the sigmoid function.
+        :param x: Input value.
+        :return: Derivative of sigmoid at x.
+        """
+        return x * (1 - x)
+
+class Layer:
+    def __init__(self, num_neurons, input_size):
+        """
+        Initialize a layer with a specified number of neurons.
+        :param num_neurons: Number of neurons in the layer.
+        :param input_size: Number of input features.
+        """
+        self.neurons = [Neuron(input_size) for _ in range(num_neurons)]
+
+    def forward(self, inputs):
+        """
+        Perform forward propagation for the layer.
+        :param inputs: Input values.
+        :return: Outputs of all neurons in the layer.
+        """
+        return np.array([neuron.activate(inputs) for neuron in self.neurons])
+
+class NeuralNetwork:
+    def __init__(self, input_size, hidden_size, output_size):
+        """
+        Initialize the Neural Network.
+        :param input_size: Number of input features.
+        :param hidden_size: Number of neurons in the hidden layer.
+        :param output_size: Number of output neurons.
+        """
+        self.hidden_layer = Layer(hidden_size, input_size)
+        self.output_layer = Layer(output_size, hidden_size)
+
+    def forward(self, inputs):
+        """
+        Perform forward propagation through the network.
+        :param inputs: Input values.
+        :return: Output of the Neural Network.
+        """
+        hidden_outputs = self.hidden_layer.forward(inputs)
+        outputs = self.output_layer.forward(hidden_outputs)
+        return hidden_outputs, outputs
+
+    def train(self, inputs, labels, epochs=1000, learning_rate=0.1):
+        """
+        Train the Neural Network using gradient descent and backpropagation.
+        :param inputs: Training data.
+        :param labels: Target labels.
+        :param epochs: Number of training iterations.
+        :param learning_rate: Learning rate for gradient descent.
+        """
+        for epoch in range(epochs):
+            for i in range(len(inputs)):
+                # Forward pass
+                hidden_outputs, outputs = self.forward(inputs[i])
+                # Calculate error
+                error = labels[i] - outputs
+                # Backpropagation for output layer
+                d_output = error * Neuron.sigmoid_derivative(outputs)
+                # Backpropagation for hidden layer
+                d_hidden = np.dot(d_output, [neuron.weights for neuron in self.output_layer.neurons]) * Neuron.sigmoid_derivative(hidden_outputs)
+                # Update weights and biases for output layer
+                for j, neuron in enumerate(self.output_layer.neurons):
+                    neuron.weights += learning_rate * d_output[j] * hidden_outputs
+                    neuron.bias += learning_rate * d_output[j]
+                # Update weights and biases for hidden layer
+                for j, neuron in enumerate(self.hidden_layer.neurons):
+                    neuron.weights += learning_rate * d_hidden[j] * inputs[i]
+                    neuron.bias += learning_rate * d_hidden[j]
+
+    def predict(self, inputs):
+        """
+        Predict the output for given inputs.
+        :param inputs: Input values.
+        :return: List of predictions.
+        """
+        _, outputs = self.forward(inputs)
+        return outputs
+
+class LossFunction:
+    @staticmethod
+    def mse(predictions, labels):
+        """
+        Calculate Mean Squared Error (MSE).
+        :param predictions: Predicted outputs.
+        :param labels: Target labels.
+        :return: MSE value.
+        """
+        return np.mean((predictions - labels) ** 2)
+
+# Example usage
+if __name__ == "__main__":
+    # Example dataset (2D inputs and binary labels)
+    inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    labels = np.array([[0], [1], [1], [0]])  # XOR gate
+
+    # Create and train the Neural Network
+    nn = NeuralNetwork(input_size=2, hidden_size=4, output_size=1)
+    nn.train(inputs, labels, epochs=10000, learning_rate=0.1)
+
+    # Test the Neural Network
+    test_inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    predictions = nn.predict(test_inputs)
+    print(f"Predictions: {predictions}")
+
+    # Calculate Mean Squared Error (MSE)
+    mse = LossFunction.mse(predictions, labels)
+    print(f"Mean Squared Error: {mse}")
