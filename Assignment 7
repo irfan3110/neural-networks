@@ -1,1 +1,147 @@
-hi
+import numpy as np
+
+class ActivationFunctions:
+    @staticmethod
+    def linear(x):
+        return x
+
+    @staticmethod
+    def linear_derivative(x):
+        return np.ones_like(x)
+
+    @staticmethod
+    def relu(x):
+        return np.maximum(0, x)
+
+    @staticmethod
+    def relu_derivative(x):
+        return np.where(x > 0, 1, 0)
+
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
+    @staticmethod
+    def sigmoid_derivative(x):
+        return x * (1 - x)
+
+    @staticmethod
+    def tanh(x):
+        return np.tanh(x)
+
+    @staticmethod
+    def tanh_derivative(x):
+        return 1 - np.tanh(x) ** 2
+
+    @staticmethod
+    def softmax(x):
+        exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
+        return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+
+    @staticmethod
+    def softmax_derivative(x):
+        return x * (1 - x)
+
+class Layer:
+    def __init__(self, input_size, num_neurons, activation='relu'):
+        self.weights = np.random.randn(input_size, num_neurons) * 0.01
+        self.bias = np.zeros((1, num_neurons))
+        self.activation = activation
+
+    def forward(self, inputs):
+        self.inputs = inputs
+        self.z = np.dot(inputs, self.weights) + self.bias
+        if self.activation == 'linear':
+            self.a = ActivationFunctions.linear(self.z)
+        elif self.activation == 'relu':
+            self.a = ActivationFunctions.relu(self.z)
+        elif self.activation == 'sigmoid':
+            self.a = ActivationFunctions.sigmoid(self.z)
+        elif self.activation == 'tanh':
+            self.a = ActivationFunctions.tanh(self.z)
+        elif self.activation == 'softmax':
+            self.a = ActivationFunctions.softmax(self.z)
+        return self.a
+
+    def backward(self, dA):
+        if self.activation == 'linear':
+            dZ = dA * ActivationFunctions.linear_derivative(self.a)
+        elif self.activation == 'relu':
+            dZ = dA * ActivationFunctions.relu_derivative(self.a)
+        elif self.activation == 'sigmoid':
+            dZ = dA * ActivationFunctions.sigmoid_derivative(self.a)
+        elif self.activation == 'tanh':
+            dZ = dA * ActivationFunctions.tanh_derivative(self.a)
+        elif self.activation == 'softmax':
+            dZ = dA * ActivationFunctions.softmax_derivative(self.a)
+
+        dW = np.dot(self.inputs.T, dZ)
+        db = np.sum(dZ, axis=0, keepdims=True)
+        dA_prev = np.dot(dZ, self.weights.T)
+
+        return dA_prev, dW, db
+
+class NeuralNetwork:
+    def __init__(self, layer_sizes, activations):
+        self.layers = []
+        for i in range(len(layer_sizes) - 1):
+            self.layers.append(Layer(layer_sizes[i], layer_sizes[i+1], activations[i]))
+
+    def forward(self, X):
+        A = X
+        for layer in self.layers:
+            A = layer.forward(A)
+        return A
+
+    def backward(self, dA):
+        dWs = []
+        dbs = []
+        for layer in reversed(self.layers):
+            dA, dW, db = layer.backward(dA)
+            dWs.append(dW)
+            dbs.append(db)
+        return dWs[::-1], dbs[::-1]
+
+    def update_parameters(self, dWs, dbs, learning_rate):
+        for layer, dW, db in zip(self.layers, dWs, dbs):
+            layer.weights -= learning_rate * dW
+            layer.bias -= learning_rate * db
+
+    def train(self, X, Y, epochs=1000, learning_rate=0.01):
+        for epoch in range(epochs):
+            # Forward pass
+            A = self.forward(X)
+            # Compute loss
+            loss = self.compute_loss(A, Y)
+            # Backward pass
+            dA = self.compute_loss_derivative(A, Y)
+            dWs, dbs = self.backward(dA)
+            # Update parameters
+            self.update_parameters(dWs, dbs, learning_rate)
+            if epoch % 100 == 0:
+                print(f"Epoch {epoch}, Loss: {loss}")
+
+    def compute_loss(self, A, Y):
+        return np.mean((A - Y) ** 2)
+
+    def compute_loss_derivative(self, A, Y):
+        return 2 * (A - Y) / Y.size
+
+# Example usage
+if __name__ == "__main__":
+    # Example dataset (2D inputs and binary labels)
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    Y = np.array([[0], [1], [1], [0]])  # XOR gate
+
+    # Create and train the Neural Network
+    nn = NeuralNetwork(layer_sizes=[2, 4, 1], activations=['relu', 'sigmoid'])
+    nn.train(X, Y, epochs=10000, learning_rate=0.1)
+
+    # Test the Neural Network
+    test_inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    predictions = nn.forward(test_inputs)
+    print(f"Predictions: {predictions}")
+
+    # Calculate Mean Squared Error (MSE)
+    mse = nn.compute_loss(predictions, Y)
+    print(f"Mean Squared Error: {mse}")
