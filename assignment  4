@@ -1,1 +1,151 @@
+import numpy as np
 
+# Activation Functions
+class Activation:
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
+    @staticmethod
+    def sigmoid_derivative(x):
+        return x * (1 - x)
+
+    @staticmethod
+    def relu(x):
+        return np.maximum(0, x)
+
+    @staticmethod
+    def relu_derivative(x):
+        return np.where(x > 0, 1, 0)
+
+# Neuron Class
+class Neuron:
+    def __init__(self, input_size, activation):
+        self.weights = np.random.randn(input_size)
+        self.bias = np.random.randn()
+        self.activation = activation
+
+    def forward(self, inputs):
+        self.inputs = inputs
+        self.output = self.activation(np.dot(self.weights, self.inputs) + self.bias)
+        return self.output
+
+    def backward(self, error):
+        self.delta = error * self.activation_derivative(self.output)
+        return self.delta
+
+    def update_weights(self, learning_rate):
+        self.weights -= learning_rate * np.outer(self.delta, self.inputs)
+        self.bias -= learning_rate * self.delta
+
+# Layer Class
+class Layer:
+    def __init__(self, num_neurons, input_size, activation):
+        self.neurons = [Neuron(input_size, activation) for _ in range(num_neurons)]
+
+    def forward(self, inputs):
+        return np.array([neuron.forward(inputs) for neuron in self.neurons])
+
+    def backward(self, error):
+        return np.array([neuron.backward(error[i]) for i, neuron in enumerate(self.neurons)])
+
+    def update_weights(self, learning_rate):
+        for neuron in self.neurons:
+            neuron.update_weights(learning_rate)
+
+# Parameters Class
+class Parameters:
+    def __init__(self, input_size, hidden_size, output_size):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+
+# Model Class (Neural Network with one hidden layer)
+class Model:
+    def __init__(self, input_size, hidden_size, output_size):
+        self.hidden_layer = Layer(hidden_size, input_size, Activation.sigmoid)
+        self.output_layer = Layer(output_size, hidden_size, Activation.sigmoid)
+
+    def forward(self, inputs):
+        self.hidden_output = self.hidden_layer.forward(inputs)
+        self.output = self.output_layer.forward(self.hidden_output)
+        return self.output
+
+    def backward(self, error):
+        output_error = self.output_layer.backward(error)
+        hidden_error = self.hidden_layer.backward(output_error)
+        return hidden_error
+
+    def update_weights(self, learning_rate):
+        self.hidden_layer.update_weights(learning_rate)
+        self.output_layer.update_weights(learning_rate)
+
+# Loss Function Class
+class LossFunction:
+    @staticmethod
+    def mse(y_true, y_pred):
+        return np.mean((y_true - y_pred) ** 2)
+
+    @staticmethod
+    def mse_derivative(y_true, y_pred):
+        return 2 * (y_pred - y_true) / y_true.size
+
+# Forward Propagation Class
+class ForwardProp:
+    @staticmethod
+    def compute(model, inputs):
+        return model.forward(inputs)
+
+# Backward Propagation Class
+class BackProp:
+    @staticmethod
+    def compute(model, error):
+        return model.backward(error)
+
+# Gradient Descent Class
+class GradDescent:
+    @staticmethod
+    def update(model, learning_rate):
+        model.update_weights(learning_rate)
+
+# Training Class
+class Training:
+    @staticmethod
+    def train(model, X, y, epochs, learning_rate):
+        for epoch in range(epochs):
+            total_loss = 0
+            for inputs, target in zip(X, y):
+                # Forward pass
+                output = ForwardProp.compute(model, inputs)
+                # Compute loss
+                loss = LossFunction.mse(target, output)
+                total_loss += loss
+                # Backward pass
+                error = LossFunction.mse_derivative(target, output)
+                BackProp.compute(model, error)
+                # Update weights
+                GradDescent.update(model, learning_rate)
+            if (epoch + 1) % 100 == 0:
+                print(f"Epoch {epoch + 1}, Loss: {total_loss / len(X)}")
+
+# Example Usage
+if __name__ == "__main__":
+    # Input data (4 samples, 3 features)
+    X = np.array([[0, 0, 1],
+                  [0, 1, 1],
+                  [1, 0, 1],
+                  [1, 1, 1]])
+
+    # Target output (4 samples, 1 output)
+    y = np.array([[0], [1], [1], [0]])
+
+    # Create model (3 input features, 4 hidden neurons, 1 output neuron)
+    model = Model(input_size=3, hidden_size=4, output_size=1)
+
+    # Train the model
+    Training.train(model, X, y, epochs=1000, learning_rate=0.1)
+
+    # Test the model
+    test_input = np.array([1, 0, 0])
+    prediction = model.forward(test_input)
+    print(f"Prediction for {test_input}: {prediction}")
