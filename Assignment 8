@@ -1,1 +1,51 @@
+import os
+import numpy as np
+from sklearn.model_selection import train_test_split
+from skimage.io import imread
+from skimage.transform import resize
 
+# Step 1: Define image IDs (assuming 100 images)
+image_ids = np.arange(1, 101)
+
+# Step 2: Split image IDs into training, validation, and testing sets
+train_ids, test_ids = train_test_split(image_ids, test_size=0.3, random_state=42)  # 70% train, 30% test
+val_ids, test_ids = train_test_split(test_ids, test_size=0.5, random_state=42)  # 15% validation, 15% test
+
+# Step 3: Function to load and preprocess images
+def load_and_preprocess_image(image_path, target_size=(128, 128)):
+    """
+    Load an image, resize it, and normalize pixel values to [0, 1].
+    """
+    image = imread(image_path)  # Load image
+    image_resized = resize(image, target_size, anti_aliasing=True)  # Resize image
+    image_normalized = image_resized / 255.0  # Normalize pixel values
+    return image_normalized
+
+# Step 4: Directory containing images
+images_dir = '/Users/zafar/Desktop/Northeastern University/Neural Networks/Test images'
+
+# Step 5: Load and preprocess images for training, validation, and testing sets
+def load_images(image_ids, images_dir, target_size=(128, 128)):
+    """
+    Load and preprocess images based on their IDs.
+    """
+    images = []
+    for image_id in image_ids:
+        image_filename = f"img_{image_id}.jpg"  # Assuming filenames are img_1.jpg, img_2.jpg, etc.
+        image_path = os.path.join(images_dir, image_filename)
+        if os.path.exists(image_path):  # Check if the file exists
+            image = load_and_preprocess_image(image_path, target_size)
+            images.append(image)
+        else:
+            print(f"Warning: Image {image_filename} not found.")
+    return np.array(images)
+
+# Load training, validation, and testing images
+train_images = load_images(train_ids, images_dir)
+val_images = load_images(val_ids, images_dir)
+test_images = load_images(test_ids, images_dir)
+
+# Step 6: Print the shapes of the datasets
+print(f"Training set shape: {train_images.shape}")
+print(f"Validation set shape: {val_images.shape}")
+print(f"Testing set shape: {test_images.shape}")
