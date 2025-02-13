@@ -1,0 +1,54 @@
+import tensorflow as tf
+from tensorflow.keras import layers, models, regularizers
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.utils import to_categorical
+
+# Step 1: Load and preprocess the MNIST dataset
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+# Normalize pixel values to [0, 1]
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# Reshape data to fit the model (28x28 images)
+x_train = x_train.reshape((x_train.shape[0], 28, 28, 1))
+x_test = x_test.reshape((x_test.shape[0], 28, 28, 1))
+
+# One-hot encode the labels
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+# Step 2: Build the neural network with regularization and dropout
+model = models.Sequential()
+
+# Input layer
+model.add(layers.Input(shape=(28, 28, 1)))
+
+# Convolutional layers with L2 regularization
+model.add(layers.Conv2D(32, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Dropout(0.25))  # Dropout after the first convolutional layer
+
+model.add(layers.Conv2D(64, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Dropout(0.25))  # Dropout after the second convolutional layer
+
+# Fully connected layers with L2 regularization
+model.add(layers.Flatten()))
+model.add(layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+model.add(layers.Dropout(0.5))  # Dropout after the dense layer
+
+# Output layer
+model.add(layers.Dense(10, activation='softmax')))
+
+# Step 3: Compile the model
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Step 4: Train the model
+history = model.fit(x_train, y_train, epochs=10, batch_size=128, validation_split=0.2)
+
+# Step 5: Evaluate the model on the test set
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"Test accuracy: {test_acc:.4f}")
