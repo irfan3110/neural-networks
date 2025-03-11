@@ -1,0 +1,72 @@
+import numpy as np
+
+def convolve2D(image, kernel):
+    """
+    Apply 2D convolution on an image with a given kernel, without padding and with stride 1.
+    
+    In image processing, the kernel is typically flipped for convolution operations
+    (as opposed to cross-correlation where no flipping occurs).
+    
+    Args:
+        image: A 2D numpy array representing the input image
+        kernel: A 2D numpy array representing the convolution filter/kernel
+        
+    Returns:
+        A 2D numpy array representing the convolved image
+    """
+    # Flip the kernel for true convolution operation
+    kernel = np.flipud(np.fliplr(kernel))
+    
+    # Calculate output dimensions
+    output_height = image.shape[0] - kernel.shape[0] + 1
+    output_width = image.shape[1] - kernel.shape[1] + 1
+    
+    # Initialize output array with zeros
+    output = np.zeros((output_height, output_width))
+    
+    # Apply the convolution operation
+    for i in range(output_height):
+        for j in range(output_width):
+            # Extract the current region from the image
+            region = image[i:i+kernel.shape[0], j:j+kernel.shape[1]]
+            # Perform element-wise multiplication and sum
+            output[i, j] = np.sum(region * kernel)
+    
+    return output
+
+# Example usage
+if __name__ == "__main__":
+    # Create a 6x6 sample image (sequential values for easy visualization)
+    image = np.array([
+        [1, 2, 3, 4, 5, 6],
+        [7, 8, 9, 10, 11, 12],
+        [13, 14, 15, 16, 17, 18],
+        [19, 20, 21, 22, 23, 24],
+        [25, 26, 27, 28, 29, 30],
+        [31, 32, 33, 34, 35, 36]
+    ])
+    
+    # Create a 3x3 Sobel filter for horizontal edge detection
+    kernel = np.array([
+        [-1, -2, -1],
+        [0, 0, 0],
+        [1, 2, 1]
+    ])
+    
+    # Apply convolution
+    result = convolve2D(image, kernel)
+    
+    # Print results
+    print("Original Image (6x6):")
+    print(image)
+    print("\nKernel (Sobel horizontal edge detector, 3x3):")
+    print(kernel)
+    print("\nConvolution Result (4x4):")
+    print(result)
+    
+    # Let's calculate the first value manually to verify
+    first_region = image[0:3, 0:3]
+    flipped_kernel = np.flipud(np.fliplr(kernel))
+    manual_result = np.sum(first_region * flipped_kernel)
+    print(f"\nManual calculation of first value: {manual_result}")
+    print(f"Algorithm's first value: {result[0, 0]}")
