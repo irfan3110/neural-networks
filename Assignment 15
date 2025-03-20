@@ -1,0 +1,73 @@
+import numpy as np
+from scipy.signal import convolve2d
+
+def depthwise_convolution(image, depthwise_kernels):
+    """
+    Perform depthwise convolution on each channel separately.
+    
+    :param image: Input image of shape (H, W, C)
+    :param depthwise_kernels: Kernel of shape (kH, kW, C)
+    :return: Depthwise convolved image of shape (H, W, C)
+    """
+    H, W, C = image.shape
+    kH, kW, _ = depthwise_kernels.shape
+    output = np.zeros_like(image)
+
+    for c in range(C):
+        output[:, :, c] = convolve2d(image[:, :, c], depthwise_kernels[:, :, c], mode='same', boundary='fill', fillvalue=0)
+    return output
+
+def pointwise_convolution(image, pointwise_kernel):
+    """
+    Perform pointwise (1x1) convolution across channels.
+    
+    :param image: Input image of shape (H, W, C)
+    :param pointwise_kernel: Kernel of shape (C, output_channels)
+    :return: Pointwise convolved image of shape (H, W, output_channels)
+    """
+    H, W, C = image.shape
+    _, output_channels = pointwise_kernel.shape
+    output = np.zeros((H, W, output_channels))
+
+    # For every pixel, compute dot product across channels
+    for i in range(H):
+        for j in range(W):
+            output[i, j, :] = np.dot(image[i, j, :], pointwise_kernel)
+    return output
+
+def run_convolution(image, kernel, mode='depthwise'):
+    """
+    Run depthwise or pointwise convolution based on mode.
+    
+    :param image: Input image (H, W, C)
+    :param kernel: Kernel to use
+    :param mode: 'depthwise' or 'pointwise'
+    :return: Convolved output image
+    """
+    if mode == 'depthwise':
+        print("Running Depthwise Convolution...")
+        return depthwise_convolution(image, kernel)
+    elif mode == 'pointwise':
+        print("Running Pointwise Convolution...")
+        return pointwise_convolution(image, kernel)
+    else:
+        raise ValueError("Invalid mode. Choose 'depthwise' or 'pointwise'.")
+
+# Example Usage
+if __name__ == "__main__":
+    # Create a dummy 3-channel (RGB) image
+    image = np.random.rand(5, 5, 3)
+
+    # Create a depthwise kernel (e.g., 3x3 kernel for each channel)
+    depthwise_kernel = np.random.rand(3, 3, 3)
+
+    # Create a pointwise kernel (3 input channels -> 2 output channels)
+    pointwise_kernel = np.random.rand(3, 2)
+
+    # Run Depthwise Convolution
+    depthwise_result = run_convolution(image, depthwise_kernel, mode='depthwise')
+    print("Depthwise Result Shape:", depthwise_result.shape)
+
+    # Run Pointwise Convolution
+    pointwise_result = run_convolution(image, pointwise_kernel, mode='pointwise')
+    print("Pointwise Result Shape:", pointwise_result.shape)
