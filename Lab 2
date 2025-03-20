@@ -1,0 +1,125 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, classification_report
+
+# Set random seed for reproducibility
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# Generate synthetic data
+num_samples = 1000
+ages = np.random.randint(18, 70, size=num_samples)
+bmis = np.random.uniform(18.5, 40, size=num_samples)
+blood_sugar_levels = np.random.uniform(70, 140, size=num_samples)
+
+# Create feature matrix X
+X = np.vstack((ages, bmis, blood_sugar_levels)).T
+
+# Create target variable y (1 if BMI > 25 AND blood sugar > 100, else 0)
+y = np.logical_and(bmis > 25, blood_sugar_levels > 100).astype(int)
+
+# Define min-max scaling function
+def minmaxscale(X):
+    return (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0))
+
+# Scale features
+X_scaled = minmaxscale(X)
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Print dataset information
+print("Dataset Information:")
+print(f"X_train shape: {X_train.shape}")
+print(f"y_train shape: {y_train.shape}")
+print(f"X_test shape: {X_test.shape}")
+print(f"y_test shape: {y_test.shape}")
+print(f"Percentage of positive class in training: {np.mean(y_train) * 100:.2f}%")
+print(f"Percentage of positive class in test: {np.mean(y_test) * 100:.2f}%")
+
+# Define the model architecture
+model = Sequential([
+    Dense(10, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(8, activation='relu'),
+    Dense(8, activation='relu'),
+    Dense(4, activation='relu'),
+    Dense(1, activation='sigmoid')
+])
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Print model summary
+print("\nModel Summary:")
+model.summary()
+
+# Train the model
+print("\nTraining the model...")
+history = model.fit(
+    X_train, y_train,
+    epochs=100,
+    batch_size=32,
+    validation_split=0.2,
+    verbose=1
+)
+
+# Evaluate on test set
+print("\nEvaluating on test set...")
+loss, accuracy = model.evaluate(X_test, y_test)
+print(f"Test Loss: {loss:.4f}, Test Accuracy: {accuracy:.4f}")
+
+# Make predictions and calculate metrics
+y_pred_prob = model.predict(X_test)
+y_pred = (y_pred_prob > 0.5).astype(int)
+
+# Calculate confusion matrix
+tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+print("\nConfusion Matrix:")
+print(f"True Positives: {tp}")
+print(f"False Positives: {fp}")
+print(f"True Negatives: {tn}")
+print(f"False Negatives: {fn}")
+
+# Calculate performance metrics
+precision = tp / (tp + fp)
+recall = tp / (tp + fn)
+f1_score = 2 * (precision * recall) / (precision + recall)
+print(f"\nPrecision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1_score:.4f}")
+
+# Print classification report
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Plot training history
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(12, 5))
+
+# Plot accuracy
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+# Plot loss
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig('training_history.png')
+plt.show()
